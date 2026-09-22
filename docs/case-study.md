@@ -13,12 +13,12 @@ gate. It was not a multi-agent parallel run.
 
 | Step         | Artifact                                             | Commit    |
 | ------------ | ---------------------------------------------------- | --------- |
-| Architect    | `contracts/CR-0001-catalog-repository.md`, frozen    | `a53c4ef` |
-| Implementer  | `examples/product-catalog/` built against CR-0001    | `d66f07b` |
+| Architect    | `contracts/CR-0001-catalog-repository.md`, frozen    | `96c7465` |
+| Implementer  | `examples/product-catalog/` built against CR-0001    | `b653696` |
 | Validator    | `npm run gates` + `scripts/prove-gates-fail.sh`      | output below |
 | Reviewer     | repo owner, plus the self-review findings listed below | — |
 
-`git show --stat a53c4ef` contains no implementation files. The contract was
+`git show --stat 96c7465` contains no implementation files. The contract was
 frozen — interface, boundary rules, out-of-scope list, gates — before a
 single line of `src/` existed.
 

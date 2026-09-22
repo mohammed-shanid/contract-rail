@@ -11,7 +11,7 @@ on by default since 22.18 / 23.6, so those should work too; they have not
 been run here.
 
 ```sh
-git clone <this repo> && cd contract-rail/examples/product-catalog
+git clone https://github.com/mohammed-shanid/contract-rail.git && cd contract-rail/examples/product-catalog
 npm ci
 npm run gates     # typecheck + lint + test
 npm start         # renders the catalog page

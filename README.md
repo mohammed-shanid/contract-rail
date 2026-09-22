@@ -70,7 +70,7 @@ This is not a cross-language enforcement framework.
 ## Built with the method it teaches
 
 The contract for the example (`CR-0001`) was written and committed before
-any implementation existed — `git show --stat a53c4ef` has no `src/` files
+any implementation existed — `git show --stat 96c7465` has no `src/` files
 in it. One agent (Claude Opus 5 in Claude Code) then played implementer and
 validator in sequence, with the repo owner as reviewer. Along the way the
 `npm start` gate caught two runtime failures that typecheck and tests

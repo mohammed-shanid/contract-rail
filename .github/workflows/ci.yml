@@ -1,0 +1,46 @@
+name: gates
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  example-gates:
+    name: example — typecheck, lint, test, run
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples/product-catalog
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: examples/product-catalog/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm start
+
+  prove-gates-fail:
+    name: known violations turn the gates red
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: examples/product-catalog/package-lock.json
+      - run: npm ci
+        working-directory: examples/product-catalog
+      - run: ./scripts/prove-gates-fail.sh
+
+  claim-audit:
+    name: docs make no unbacked claims
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./scripts/claim-audit.sh

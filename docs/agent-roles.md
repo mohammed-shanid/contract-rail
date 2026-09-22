@@ -27,9 +27,9 @@ architect ──contract──▶ implementer ──code + gate output──▶ 
   **Governs** path is disjoint and the architecture test fails if one
   reaches into another's layer. Untested here at N > 1; the mechanism is the
   same, the coordination cost is not.
-- **Validator = the CI workflow** (`.github/workflows/ci.yml`) once it runs
-  on a host; until then, the same commands run locally (`npm run gates`,
-  `scripts/prove-gates-fail.sh`, `scripts/claim-audit.sh`).
+- **Validator = the CI workflow** (`.github/workflows/ci.yml`). The same
+  commands run locally (`npm run gates`, `scripts/prove-gates-fail.sh`,
+  `scripts/claim-audit.sh`).
   A human or agent validator adds value only by checking invariants
   (contract section 4) that no test covers yet — and the right output of
   that is a new test, not a comment.

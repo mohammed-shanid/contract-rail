@@ -5,10 +5,9 @@ own contract.
 
 ## 1. Run the gates
 
-Verified locally on Node 24; the CI workflow is configured for the same
-version. The example runs TypeScript through Node's native type-stripping,
-on by default since 22.18 / 23.6, so those should work too; they have not
-been run here.
+Verified on Node 24, locally and in CI. The example runs TypeScript
+through Node's native type-stripping, on by default since 22.18 / 23.6, so
+those should work too; they have not been run here.
 
 ```sh
 git clone https://github.com/mohammed-shanid/contract-rail.git && cd contract-rail/examples/product-catalog

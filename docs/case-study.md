@@ -81,10 +81,10 @@ method to the frozen interface that leaks the concrete type):
 ```
 
 And the proof that both mechanisms catch both patches, which
-`.github/workflows/ci.yml` is configured to run on every push. Its steps are
-exactly the commands shown in this document. At the time of this commit the
-workflow had not yet executed on GitHub Actions because the repo had not
-been pushed; the Actions tab is the place to check.
+`.github/workflows/ci.yml` runs on every push. Its steps are exactly the
+commands shown in this document. The workflow's first run on GitHub
+Actions was on commit `9d90bcb`, all three jobs green:
+<https://github.com/mohammed-shanid/contract-rail/actions/runs/35703871326>.
 
 ```
 $ ./scripts/prove-gates-fail.sh

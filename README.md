@@ -1,104 +1,218 @@
-# contract-rail
+# ContractRail
 
 **Boundaries the build enforces, not the prompt.**
+
+[![CI](https://github.com/mohammed-shanid/contract-rail/actions/workflows/ci.yml/badge.svg)](https://github.com/mohammed-shanid/contract-rail/actions/workflows/ci.yml)
 
 Freeze the interface. Let agents implement against it. If one crosses a
 boundary, the build fails — not a reviewer, not a prompt, the build.
 
+---
+
+## 1. What it is
+
+A small method for letting coding agents work on a codebase without
+crossing each other's boundaries, plus a runnable example proving the
+boundaries are enforced by the build. Four parts:
+
+| Part | Where | What it does |
+| --- | --- | --- |
+| **Contracts** | `contracts/` | A frozen scope + interface + boundary-rules table. Every rule must name the mechanism that enforces it. |
+| **Agent roles** | `skills/`, `AGENTS.md` | Architect writes the contract; implementer builds against it. Roles are defined by what they may *not* do. |
+| **Machine-enforced checks** | `examples/product-catalog/` | ESLint rule + architecture test + hash lock. Crossing a boundary fails lint *and* a test. |
+| **Validation** | `scripts/`, `.github/workflows/ci.yml` | Gates run in CI, and a proof script applies known violations to confirm the gates still go red. |
+
+Nothing here invents multi-agent workflows or agent instruction files. It
+stands on [AGENTS.md](https://agents.md) and
+[Agent Skills](https://agentskills.io) (see §8).
+
+## 2. Why it exists
+
+Agent-instruction templates and multi-agent handoff repos already exist,
+and several are good. Most stop at the prompt: they *tell* the agent not
+to cross the boundary. This repo assumes the agent will cross it anyway —
+under time pressure, after a context reset, or because the quick fix was
+genuinely quicker — and makes the build refuse.
+
+What this adds over a prompt-only approach:
+
+- an **enforcement column** in the contract — a rule with no mechanism is
+  not allowed in the template
+- a **runnable example** whose gates go red on a committed violation patch
+- a **hash lock** that makes silent interface changes impossible
+- a **CI job** that re-applies the known violations and requires red
+
+## 3. Workflow
+
+```mermaid
+flowchart TD
+    A[Human requirement] --> B["Architect (skills/architect)"]
+    B --> C["Contract CR-NNNN: scope, frozen interface,<br/>boundary rules + enforcement mechanism"]
+    C -->|committed alone, Status: frozen| D["Implementer (skills/implementer)"]
+    D --> E[Implementation + tests + enforcement]
+    E --> F{Gates}
+    F --> G[typecheck · lint · tests · npm start]
+    F --> H[architecture test + CONTRACT_LOCK]
+    F --> I[prove-gates-fail.sh:<br/>known violations must go red]
+    G & H & I -->|all green| J[Human review]
+    J -->|CONTRACT_LOCK diff without a new CR? bounce| D
+    J --> K[Merge]
+    D -.->|"contract is wrong"| B
 ```
-$ patch -p1 < violations/ui-bypasses-repository.patch    # UI reads the data source directly
+
+The handoffs are files, not messages: the architect hands off a committed
+contract; the implementer hands off a diff plus pasted gate output.
+`docs/agent-roles.md` defines each role by what it may not do.
+
+## 4. Proof: bad architecture → build fails
+
+The example enforces this dependency direction:
+
+```text
+UI  (src/ui/)
+ ↓  imports only the interface
+Repository interface  (src/contracts/ — frozen, hashed)
+ ↑  implemented by
+Data source  (src/data/)
+```
+
+and rejects this:
+
+```text
+UI  →  Data source          (direct import; bypasses the interface)
+```
+
+`src/main.ts` is the one composition root allowed to wire the two together.
+
+**Valid tree** (`npm run gates` + `npm start`):
+
+```text
+✓ typecheck
+✓ lint
+✓ tests          4 files, 14 tests
+✓ npm start      renders the page
+```
+
+**Intentional violation** — apply the committed patch that makes the UI
+read the data source directly:
+
+```sh
+cd examples/product-catalog
+patch -p1 < violations/ui-bypasses-repository.patch
+```
+
+```text
 $ npm run lint
 src/ui/catalogPage.ts
   3:1  error  '../data/inMemoryCatalogRepository.ts' import is restricted from being used by a pattern.
        CR-0001 rule 1: this layer may not import src/data. Depend on the CatalogRepository
        interface from src/contracts and let src/main.ts inject the implementation
 
-$ npx vitest run test/architecture.test.ts                 # even with ESLint disabled
+$ npx vitest run test/architecture.test.ts        # still fails with ESLint disabled
  × rule 1+2: only src/main.ts and src/data may import src/data
    + Received [ "src/ui/catalogPage.ts imports \"../data/inMemoryCatalogRepository.ts\"" ]
 ```
 
-That output is real (paths shortened, lines wrapped), from
-`examples/product-catalog/`. The CI workflow is configured to re-prove it
-on every push by applying the violation and requiring both gates to fail;
-so far the proof has been verified locally (see *Status* below).
+```text
+✗ lint
+✗ architecture test
+```
 
-## What this is
+Undo with `patch -R -p1 < violations/ui-bypasses-repository.patch`. A
+second patch, `contract-edited-without-cr.patch`, shows the frozen layer
+refusing a silent interface change (rules 3 and 4 fail).
 
-Three things, and only three:
+Output above is real, with paths shortened and lines wrapped. The
+`prove-gates-fail` CI job applies both patches to a scratch copy on every
+push and fails unless **both** lint and the architecture test go red —
+so a gate that quietly stops enforcing is caught too.
 
-1. **A contract format** (`contracts/TEMPLATE.md`). Scope in, scope out, the
-   frozen interface as code, and a boundary-rules table where every rule
-   must name the mechanism that enforces it. One filled example:
-   `contracts/CR-0001-catalog-repository.md`.
-2. **A working example** (`examples/product-catalog/`) — typed
-   `CatalogRepository` interface, in-memory implementation, reducer, page,
-   14 tests — with a lint rule and an architecture test that fail if the UI
-   imports the data layer, and a hash lock that fails if the frozen
-   interface changes without a superseding contract.
-3. **Two skills** (`skills/architect`, `skills/implementer`) in the Agent
-   Skills `SKILL.md` format, plus an `AGENTS.md`, so an agent can play each
-   role with the guardrails loaded.
-
-The loop: **architect** freezes a contract → **implementer** builds against
-it → **validator** runs the gates → **reviewer** merges or bounces. Roles
-are defined in `docs/agent-roles.md` by what each one may *not* do.
-
-## Run it
+## 5. Quick start
 
 ```sh
-cd examples/product-catalog
+git clone https://github.com/mohammed-shanid/contract-rail.git
+cd contract-rail/examples/product-catalog
 npm ci
-npm run gates          # typecheck + lint + 14 tests
-npm start              # renders the catalog page to stdout
+npm run gates                       # typecheck + lint + tests
+npm start                           # renders the catalog page to stdout
 ../../scripts/prove-gates-fail.sh   # applies each violation patch, requires red
 ```
 
-Verified locally on Node 24; the CI workflow is configured for the same
-version. Node 22.18+ has the same native TypeScript support and should
-work, but has not been run here. Then read `docs/getting-started.md` to
-break it yourself and write your own contract.
+Verified on Node 24, locally and in CI. Node 22.18+ has the same native
+TypeScript support and should work, but has not been run here.
+
+Then read `docs/getting-started.md` to break it yourself and write your
+own contract.
+
+## 6. How it works
+
+**The contract** (`contracts/CR-0001-catalog-repository.md`) freezes the
+`CatalogRepository` interface and states four rules, each with its
+enforcement mechanism:
+
+| # | Rule | Enforced by |
+| - | --- | --- |
+| 1 | `src/ui/**` must not import `src/data/**` | ESLint `no-restricted-imports` + `test/architecture.test.ts` |
+| 2 | Only `src/main.ts` and `src/data/**` may import `src/data/**` | same two |
+| 3 | `src/contracts/**` imports nothing outside itself | same two |
+| 4 | `src/contracts/**` cannot change without a superseding CR | SHA-256 `CONTRACT_LOCK` checked by the architecture test |
+
+**Two mechanisms per rule, on purpose.** The lint rule gives editor-time
+feedback; the architecture test (~60 lines, walks the import graph with
+Node only) survives `eslint-disable`, a deleted ESLint config, or a
+dynamic `import()`. An agent under pressure reaches for the first escape
+hatch; the second mechanism still fires.
+
+**The lock** is a hash of `src/contracts/*.ts` committed next to it. It
+fails locally, in any CI, and in any fork — no hosting configuration
+required — and turns an interface change into a visible diff a reviewer
+can demand a contract for.
 
 **Scope of the enforcement.** The method is language-independent; the
-shipped enforcement is not. `architecture.test.ts` and the ESLint rule are
-a TypeScript/JavaScript reference implementation of the pattern (import
-graph + frozen-directory hash). Other ecosystems have their own dependency
-analysis tools for the same job — `import-linter` for Python, ArchUnit for
-the JVM, `depguard` for Go — but none of those are exercised in this repo.
-This is not a cross-language enforcement framework.
+shipped enforcement is not. It is a TypeScript/JavaScript reference
+implementation of the pattern. Equivalent dependency-analysis tools exist
+elsewhere (`import-linter` for Python, ArchUnit for the JVM, `depguard`
+for Go) but none are exercised in this repo. This is not a cross-language
+enforcement framework.
 
-## Built with the method it teaches
+## 7. Repository structure
 
-The contract for the example (`CR-0001`) was written and committed before
-any implementation existed — `git show --stat 96c7465` has no `src/` files
-in it. One agent (Claude Opus 5 in Claude Code) then played implementer and
+```text
+contracts/       TEMPLATE.md, CR-0001-catalog-repository.md
+skills/          architect/SKILL.md, implementer/SKILL.md
+examples/product-catalog/
+  src/contracts/ frozen; CONTRACT_LOCK hashes it
+  src/data/      the only layer that knows about storage
+  src/ui/        reducer + page renderer; may not import data
+  src/main.ts    composition root; the one file allowed to import data
+  test/          unit tests + architecture.test.ts
+  violations/    patches that must turn the gates red
+scripts/         prove-gates-fail.sh, claim-audit.sh
+docs/            getting-started, agent-roles, failure-recovery,
+                 when-not-to-use, case-study
+.github/         ci.yml — example gates, prove-gates-fail, claim-audit
+```
+
+Every file above is referenced by a doc, a test, or CI. If you find one
+that is not, that is a bug; see `CONTRIBUTING.md`.
+
+## 8. Case study, standards, and limitations
+
+### Built with the method it teaches
+
+The contract for the example was written and committed before any
+implementation existed — `git show --stat 96c7465` has no `src/` files in
+it. One agent (Claude Opus 5 in Claude Code) then played implementer and
 validator in sequence, with the repo owner as reviewer. Along the way the
 `npm start` gate caught two runtime failures that typecheck and tests
-missed, which is why `npm start` is a step in the CI workflow. The full
-account, with the ADRs and the raw gate output, is in `docs/case-study.md`.
+missed, which is why it is a step in the CI workflow. The full account,
+with the ADRs and the raw gate output, is in `docs/case-study.md`.
 
-Honest shape of that claim: one agent, sequential roles, one human
-reviewer. Not a parallel multi-agent run. The mechanism is the same; the
-coordination has not been exercised here at N > 1.
+Honest shape of that claim: **one agent, sequential roles, one human
+reviewer.** Not a parallel multi-agent run. The mechanism is the same;
+the coordination has not been exercised here at N > 1.
 
-## What already exists, and what this adds
-
-Agent-instruction templates and multi-agent handoff repos already exist and
-several are good. Most stop at the prompt: they tell the agent not to cross
-the boundary. This repo assumes the agent will cross it anyway — under time
-pressure, after a context reset, or because the "quick fix" was genuinely
-quicker — and makes the build refuse. The additions are:
-
-- an enforcement column in the contract (a rule without a mechanism is not
-  allowed in the template),
-- a runnable example whose gates go red on a committed violation patch,
-- a hash lock that makes silent interface changes impossible,
-- a CI job configured to re-run that proof on every push.
-
-Nothing here invents multi-agent workflows or agent instruction files. It
-stands on the existing standards below.
-
-## Standards this stands on
+### Standards this stands on
 
 These are different tools, not parallel equals:
 
@@ -120,36 +234,15 @@ These are different tools, not parallel equals:
 Dates and figures above are as reported in the Linux Foundation and
 Anthropic announcements; this repo has not independently measured adoption.
 
-## Layout
+### Status
 
-```
-contracts/       TEMPLATE.md, CR-0001-catalog-repository.md
-skills/          architect/SKILL.md, implementer/SKILL.md
-examples/product-catalog/
-  src/contracts/ frozen; CONTRACT_LOCK hashes it
-  src/data/      the only layer that knows about storage
-  src/ui/        reducer + page renderer; may not import data
-  src/main.ts    composition root; the one file allowed to import data
-  test/          unit tests + architecture.test.ts
-  violations/    patches that must turn the gates red
-scripts/         prove-gates-fail.sh, claim-audit.sh
-docs/            getting-started, agent-roles, failure-recovery,
-                 when-not-to-use, case-study
-.github/         ci.yml — example gates, prove-gates-fail, claim-audit
-```
+Pre-release, v0.1. The CI workflow (`.github/workflows/ci.yml`) runs all
+three jobs — example gates, prove-gates-fail, claim-audit — on every push;
+the badge at the top reflects the latest run. Not exercised here: parallel
+implementers, languages other than TypeScript, anything beyond the
+in-memory example.
 
-Every file above is referenced by a doc, a test, or CI. If you find one
-that is not, that is a bug; see `CONTRIBUTING.md`.
-
-## Status
-
-Pre-release. Every gate in `.github/workflows/ci.yml` has been run locally
-on Node 24 with the output shown in `docs/case-study.md`; the workflow
-itself has not yet executed on a hosted runner because the repo has not
-been pushed. Once it has, this paragraph should be replaced by a link to a
-green run.
-
-## Not for you if
+### Not for you if
 
 You do not know the interface yet, one human reads every diff, or the
 boundary you care about is behavioural rather than structural.

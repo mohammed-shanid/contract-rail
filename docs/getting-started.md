@@ -5,9 +5,10 @@ own contract.
 
 ## 1. Run the gates
 
-Verified on Node 24, which is what CI uses. The example runs TypeScript
-through Node's native type-stripping, on by default since 22.18 / 23.6, so
-those should work too; they have not been run here.
+Verified locally on Node 24; the CI workflow is configured for the same
+version. The example runs TypeScript through Node's native type-stripping,
+on by default since 22.18 / 23.6, so those should work too; they have not
+been run here.
 
 ```sh
 git clone <this repo> && cd contract-rail/examples/product-catalog
@@ -82,8 +83,17 @@ tells any agent where things are.
 
 ## Adapting to other languages
 
-The example is TypeScript because that is what is proven here. The three
-mechanisms — import-restriction lint, import-graph test, frozen-directory
-hash — exist or are trivial to write in most ecosystems (e.g. ArchUnit for
-the JVM, `import-linter` for Python, Go's `depguard`). Nothing in this repo
-has been run against those; treat that sentence as a pointer, not a claim.
+The principle — boundaries as machine-checked import rules plus a frozen
+directory — is language-independent. The implementation here is not: it is
+a TypeScript/JavaScript reference implementation (ESLint
+`no-restricted-imports`, a Node script over the import graph, a SHA-256
+lock). Equivalent dependency-analysis tools exist elsewhere:
+
+| Ecosystem | Import-boundary tool                          |
+| --------- | --------------------------------------------- |
+| Python    | `import-linter` (contracts over import graph) |
+| JVM       | ArchUnit (architecture rules as unit tests)   |
+| Go        | `depguard` (allow/deny lists for imports)     |
+
+None of these are exercised in this repo. Treat the table as pointers, not
+as anything this project has verified.

@@ -19,8 +19,9 @@ $ npx vitest run test/architecture.test.ts                 # even with ESLint di
 ```
 
 That output is real (paths shortened, lines wrapped), from
-`examples/product-catalog/`. The CI workflow re-proves it on every push by
-applying the violation and requiring both gates to fail.
+`examples/product-catalog/`. The CI workflow is configured to re-prove it
+on every push by applying the violation and requiring both gates to fail;
+so far the proof has been verified locally (see *Status* below).
 
 ## What this is
 
@@ -53,9 +54,18 @@ npm start              # renders the catalog page to stdout
 ../../scripts/prove-gates-fail.sh   # applies each violation patch, requires red
 ```
 
-Verified on Node 24 (what CI runs). Node 22.18+ has the same native
-TypeScript support and should work, but has not been run here. Then read
-`docs/getting-started.md` to break it yourself and write your own contract.
+Verified locally on Node 24; the CI workflow is configured for the same
+version. Node 22.18+ has the same native TypeScript support and should
+work, but has not been run here. Then read `docs/getting-started.md` to
+break it yourself and write your own contract.
+
+**Scope of the enforcement.** The method is language-independent; the
+shipped enforcement is not. `architecture.test.ts` and the ESLint rule are
+a TypeScript/JavaScript reference implementation of the pattern (import
+graph + frozen-directory hash). Other ecosystems have their own dependency
+analysis tools for the same job — `import-linter` for Python, ArchUnit for
+the JVM, `depguard` for Go — but none of those are exercised in this repo.
+This is not a cross-language enforcement framework.
 
 ## Built with the method it teaches
 
@@ -64,8 +74,8 @@ any implementation existed — `git show --stat a53c4ef` has no `src/` files
 in it. One agent (Claude Opus 5 in Claude Code) then played implementer and
 validator in sequence, with the repo owner as reviewer. Along the way the
 `npm start` gate caught two runtime failures that typecheck and tests
-missed, which is why it is a CI gate now. The full account, with the ADRs
-and the raw gate output, is in `docs/case-study.md`.
+missed, which is why `npm start` is a step in the CI workflow. The full
+account, with the ADRs and the raw gate output, is in `docs/case-study.md`.
 
 Honest shape of that claim: one agent, sequential roles, one human
 reviewer. Not a parallel multi-agent run. The mechanism is the same; the
@@ -83,7 +93,7 @@ quicker — and makes the build refuse. The additions are:
   allowed in the template),
 - a runnable example whose gates go red on a committed violation patch,
 - a hash lock that makes silent interface changes impossible,
-- a CI job that proves the gates still catch the known violations.
+- a CI job configured to re-run that proof on every push.
 
 Nothing here invents multi-agent workflows or agent instruction files. It
 stands on the existing standards below.
@@ -130,6 +140,14 @@ docs/            getting-started, agent-roles, failure-recovery,
 
 Every file above is referenced by a doc, a test, or CI. If you find one
 that is not, that is a bug; see `CONTRIBUTING.md`.
+
+## Status
+
+Pre-release. Every gate in `.github/workflows/ci.yml` has been run locally
+on Node 24 with the output shown in `docs/case-study.md`; the workflow
+itself has not yet executed on a hosted runner because the repo has not
+been pushed. Once it has, this paragraph should be replaced by a link to a
+green run.
 
 ## Not for you if
 

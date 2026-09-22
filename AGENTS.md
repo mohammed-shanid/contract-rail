@@ -44,7 +44,7 @@ npm run contracts:lock # ONLY when a new CR supersedes the current one
 ../../scripts/claim-audit.sh        # from anywhere: flags unbacked claims in docs
 ```
 
-## Rules that the build enforces (you will not get past CI otherwise)
+## Rules that the build enforces (the CI workflow is configured to run all of these)
 
 1. Nothing outside `src/data/` and `src/main.ts` imports `src/data/`.
 2. `src/contracts/` imports nothing outside itself.

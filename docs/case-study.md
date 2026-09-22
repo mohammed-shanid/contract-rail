@@ -24,7 +24,8 @@ single line of `src/` existed.
 
 ## What the gates caught during the build
 
-These are real, not staged. They are the reason the gates are in CI.
+These are real, not staged. They are the reason each gate is a separate
+step in the CI workflow.
 
 1. **`npm start` caught two runtime failures that typecheck and tests
    missed.** The first implementation used `.js` import specifiers (the
@@ -34,7 +35,7 @@ These are real, not staged. They are the reason the gates are in CI.
    constructor parameter property (`constructor(private readonly x)`), which
    type-stripping cannot erase. Fixed with an explicit field, and
    `erasableSyntaxOnly: true` was added to tsconfig so it cannot come back.
-   Lesson recorded in CI: `npm start` runs as a gate, not just the tests.
+   Lesson recorded in the workflow: `npm start` is a step, not just the tests.
 
 2. **Self-review caught a rule-2 violation before lint ran.** The data
    layer's test was first written in `test/`, importing `src/data`. That is
@@ -80,25 +81,19 @@ method to the frozen interface that leaks the concrete type):
 ```
 
 And the proof that both mechanisms catch both patches, which
-`.github/workflows/ci.yml` runs on every push. (Its steps are exactly the
-commands shown in this document; at the time of this commit the workflow
-had not yet executed on GitHub Actions because the repo had not been
-pushed. If you are reading this on GitHub, the badge-less way to check is
-the Actions tab.)
+`.github/workflows/ci.yml` is configured to run on every push. Its steps are
+exactly the commands shown in this document. At the time of this commit the
+workflow had not yet executed on GitHub Actions because the repo had not
+been pushed; the Actions tab is the place to check.
 
 ```
 $ ./scripts/prove-gates-fail.sh
-== contract-edited-without-cr: applying violation
--- expecting lint to FAIL
-   lint failed as expected
--- expecting architecture test to FAIL
-   architecture test failed as expected
-== ui-bypasses-repository: applying violation
--- expecting lint to FAIL
-   lint failed as expected
--- expecting architecture test to FAIL
-   architecture test failed as expected
-OK: every known violation is caught by both mechanisms.
+violation                        lint       arch-test
+---------                        ----       ---------
+contract-edited-without-cr       red (ok)   red (ok)
+ui-bypasses-repository           red (ok)   red (ok)
+
+OK: every known violation is caught by both lint and the architecture test.
 ```
 
 ## Decision record
@@ -115,7 +110,7 @@ Those depend on hosting configuration that a clone does not carry. A
 and in any fork, and makes an interface change show up as a visible diff a
 reviewer can demand a CR for.
 
-**ADR-3: Violations are committed as patches and CI proves they fail.** A
+**ADR-3: Violations are committed as patches and the workflow re-proves they fail.** A
 gate that has never been seen red is not known to work. `violations/` plus
 `prove-gates-fail.sh` turns "the test would catch that" into something the
 build asserts every run.

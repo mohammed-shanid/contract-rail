@@ -47,8 +47,9 @@ gates no longer catch. **Cause** is usually one of:
 
 - a lint `ignores` glob was widened (check `eslint.config.js`)
 - the architecture test's `walk()` root or exclusions changed
-- the patch no longer applies cleanly (`patch` exits non-zero but the script
-  keeps going; check for `.rej` files in the temp dir)
+- the patch no longer applies cleanly (the script prints `NO-APPLY` for
+  that row and exits 1; regenerate the patch with `diff -u` against the
+  current file)
 
 Fix the gate, not the patch. Add a new patch if you found a new escape.
 
@@ -75,4 +76,4 @@ and 23.6; only 24 has been run here.
 The example runs on Node's native type-stripping. Use `.ts` import
 specifiers and stay inside `erasableSyntaxOnly` (no enums, no parameter
 properties, no namespaces). `tsc` enforces the second; the first shows up
-only at runtime, which is why `npm start` is a CI gate.
+only at runtime, which is why `npm start` is a step in the CI workflow.

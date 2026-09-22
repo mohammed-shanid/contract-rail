@@ -1,0 +1,24 @@
+--- a/src/ui/catalogPage.ts
++++ b/src/ui/catalogPage.ts
+@@ -1,4 +1,6 @@
+ import type { CatalogRepository } from "../contracts/catalog.ts";
++// "Quick fix": skip the injected repo and just read the data directly.
++import { InMemoryCatalogRepository } from "../data/inMemoryCatalogRepository.ts";
+ import { visibleProducts, type CatalogAction, type CatalogState } from "./catalogReducer.ts";
+ 
+ /**
+@@ -6,12 +8,12 @@
+  * implementation is injected by src/main.ts; this file never sees src/data.
+  */
+ export async function loadCatalog(
+-  repo: CatalogRepository,
++  _repo: CatalogRepository,
+   dispatch: (action: CatalogAction) => void,
+ ): Promise<void> {
+   dispatch({ type: "load/start" });
+   try {
+-    const products = await repo.list();
++    const products = await new InMemoryCatalogRepository().list();
+     dispatch({ type: "load/success", products });
+   } catch (err) {
+     dispatch({ type: "load/failure", error: err instanceof Error ? err.message : String(err) });

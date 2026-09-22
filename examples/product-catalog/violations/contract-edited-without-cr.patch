@@ -1,0 +1,14 @@
+--- a/src/contracts/catalog.ts
++++ b/src/contracts/catalog.ts
+@@ -15,7 +15,11 @@
+   readonly inStockOnly?: boolean;
+ }
+ 
++import type { InMemoryCatalogRepository } from "../data/inMemoryCatalogRepository.ts";
++
+ export interface CatalogRepository {
+   list(query?: ProductQuery): Promise<readonly Product[]>;
+   getById(id: string): Promise<Product | null>;
++  /** "Just need this for one screen" — leaks the concrete type into the contract. */
++  raw(): InMemoryCatalogRepository;
+ }

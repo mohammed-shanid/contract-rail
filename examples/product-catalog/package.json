@@ -1,0 +1,22 @@
+{
+  "name": "@contract-rail/example-product-catalog",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Working example for contract-rail: a product catalog whose UI cannot import its data source, enforced by a lint rule and an architecture test.",
+  "scripts": {
+    "start": "node src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "contracts:lock": "node scripts/contract-lock.mjs --write",
+    "gates": "npm run typecheck && npm run lint && npm test"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.6",
+    "eslint": "^9.0.0",
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^3.0.0"
+  }
+}
